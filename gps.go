@@ -53,24 +53,33 @@ func log(text string) {
 	}
 }
 
+func getLocation() (Location, error) {
+	var loc Location
+
+	out, err := exec.Command(LOCATIONCMD).Output()
+	if err != nil {
+		return loc, err
+	}
+	err = json.Unmarshal([]byte(out), &loc)
+	if err != nil {
+		return loc, err
+	}
+	return loc, err
+}
+
 func main() {
-	var loc, priorloc, temploc Location
-	var dist, totaldist, seconds, totalseconds, speed, avgspeed float64
+	var loc, priorloc Location
+	var dist, totaldist, speed, avgspeed, seconds, totalseconds float64
 	var priortime time.Time
 	var logtext string
 
         now := time.Now()
 
 	for i := 0; i < MAXITERATIONS; i++ {
-		out, err := exec.Command(LOCATIONCMD).Output()
+		temploc, err := getLocation()
 		if err != nil {
 			fmt.Println("error obtaining location:", err)
 			time.Sleep(POLLINTERVAL)
-			continue
-		}
-		err = json.Unmarshal([]byte(out), &temploc)
-		if err != nil {
-			fmt.Println("error parsing location:", err)
 			continue
 		}
 		priorloc = loc
@@ -104,9 +113,13 @@ func main() {
 			totaldist, totalseconds, speed, avgspeed)
 		log(logtext)
 
-		fmt.Printf("%s %6.0fm %5.0fs %5.1fkm/h %5.1fkm/h\n",
+		intss := int(math.Round(totalseconds))
+                ss := intss % 60
+                mm := (intss - ss) / 60
+
+		fmt.Printf("%s %6.0fm %3d:%02d %5.1fkm/h %5.1fkm/h\n",
 			now.Format("15:04:05"),
-			totaldist, totalseconds, speed, avgspeed)
+			totaldist, mm, ss, speed, avgspeed)
 		time.Sleep(POLLINTERVAL)
 	}
 }
